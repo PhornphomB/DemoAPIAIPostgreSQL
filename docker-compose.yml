@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # 1. Database สำหรับระบบ AMS/LIMS ของคุณ
+  db:
+    image: ankane/pgvector:latest
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=ams_db
+    ports:
+      - "5432:5432"
+
+  # 2. AI Engine (รันฟรี ไม่ต้องใช้ API Key)
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_storage:/root/.ollama
+
+  # 3. .NET API ของคุณ
+  ams-api:
+    image: ${DOCKER_REGISTRY-}amsapi
+    build:
+      context: .
+      dockerfile: Ams.Ai.Api/Dockerfile # แก้ชื่อโฟลเดอร์ให้ตรงกับโปรเจกต์คุณ
+    depends_on:
+      - db
+      - ollama
+    environment:
+      - ConnectionStrings__PostgreSql=Host=db;Database=ams_db;Username=admin;Password=password123
+      - AI__Endpoint=http://ollama:11434
+    ports:
+      - "8080:8080"
+
+volumes:
+  ollama_storage:
